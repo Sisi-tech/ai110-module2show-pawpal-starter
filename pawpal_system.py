@@ -1,109 +1,175 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Dict, List, Optional
 
-# Core data object for a task in the system
+
 @dataclass
 class Task:
     task_id: int
     name: str
+    description: str
     category: str
     duration_minutes: int
-    priority: str
+    priority: int
+    frequency_days: Optional[int] = None
     deadline: Optional[datetime] = None
-    notes: Optional[str] = None
-    is_required: bool = False
     completed: bool = False
+    completed_at: Optional[datetime] = None
+
+    def mark_complete(self, at: Optional[datetime] = None) -> None:
+        """Mark the task complete and track when it was done."""
+        self.completed = True
+        self.completed_at = at or datetime.now()
+
+    def reset(self) -> None:
+        """Reset completion status to incomplete."""
+        self.completed = False
+        self.completed_at = None
 
     def update(self, **updates) -> None:
-        raise NotImplementedError
-
-    def mark_complete(self) -> None:
-        raise NotImplementedError
+        """Update one or more task fields from keyword arguments."""
+        for key, value in updates.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
 
     def to_dict(self) -> Dict:
-        raise NotImplementedError
+        """Serialize this task into a JSON-friendly dictionary."""
+        return {
+            "task_id": self.task_id,
+            "name": self.name,
+            "description": self.description,
+            "category": self.category,
+            "duration_minutes": self.duration_minutes,
+            "priority": self.priority,
+            "frequency_days": self.frequency_days,
+            "deadline": self.deadline.isoformat() if self.deadline else None,
+            "completed": self.completed,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+        }
 
 
-class TaskManager:
-    def __init__(self):
-        self.tasks: Dict[int, Task] = {}
-        self.user_settings: Dict = {}
+@dataclass
+class Pet:
+    pet_id: int
+    name: str
+    species: str
+    age_years: int
+    tasks: Dict[int, Task] = field(default_factory=dict)
 
-    def add_task(self, task_data: Dict) -> Task:
-        raise NotImplementedError
-
-    def edit_task(self, task_id: int, updates: Dict) -> Task:
-        raise NotImplementedError
+    def add_task(self, task: Task) -> None:
+        """Add a task to this pet."""
+        self.tasks[task.task_id] = task
 
     def remove_task(self, task_id: int) -> None:
-        raise NotImplementedError
+        """Remove a task by ID from this pet."""
+        if task_id in self.tasks:
+            del self.tasks[task_id]
 
     def get_task(self, task_id: int) -> Optional[Task]:
-        raise NotImplementedError
+        """Return the task matching task_id, or None if missing."""
+        return self.tasks.get(task_id)
 
-    def list_tasks(self, filters: Dict = None) -> List[Task]:
-        raise NotImplementedError
+    def list_tasks(self, include_completed: bool = True) -> List[Task]:
+        all_tasks = list(self.tasks.values())
+        if not include_completed:
+            all_tasks = [t for t in all_tasks if not t.completed]
+        return sorted(all_tasks, key=lambda t: (-t.priority, t.duration_minutes))
 
-    def clear_tasks(self) -> None:
-        raise NotImplementedError
+    def to_dict(self) -> Dict:
+        return {
+            "pet_id": self.pet_id,
+            "name": self.name,
+            "species": self.species,
+            "age_years": self.age_years,
+            "tasks": [task.to_dict() for task in self.list_tasks()],
+        }
 
 
-class Schedule:
-    def __init__(self, day: date, available_time: int):
-        self.day = day
-        self.available_time = available_time
-        self.scheduled_items: List[Dict] = []
-        self.total_time_used: int = 0
-        self.reasoning: List[str] = []
+class Owner:
+    def __init__(self, owner_name: str):
+        self.owner_name = owner_name
+        self.pets: Dict[int, Pet] = {}
 
-    def add_scheduled_task(self, task: Task, start_time: datetime, end_time: datetime) -> None:
-        raise NotImplementedError
+    def add_pet(self, pet: Pet) -> None:
+        """Add a pet record for this owner."""
+        self.pets[pet.pet_id] = pet
 
-    def validate(self) -> bool:
-        raise NotImplementedError
+    def remove_pet(self, pet_id: int) -> None:
+        """Remove a pet record from this owner."""
+        if pet_id in self.pets:
+            del self.pets[pet_id]
 
-    def to_display_rows(self) -> List[Dict]:
-        raise NotImplementedError
+    def get_pet(self, pet_id: int) -> Optional[Pet]:
+        return self.pets.get(pet_id)
 
-    def explain(self) -> str:
-        raise NotImplementedError
+    def list_pets(self) -> List[Pet]:
+        return list(self.pets.values())
+
+    def all_tasks(self, include_completed: bool = True) -> List[Task]:
+        tasks: List[Task] = []
+        for pet in self.pets.values():
+            tasks.extend(pet.list_tasks(include_completed=include_completed))
+        return sorted(tasks, key=lambda t: (-t.priority, t.deadline or datetime.max))
+
+    def to_dict(self) -> Dict:
+        return {
+            "owner_name": self.owner_name,
+            "pets": [pet.to_dict() for pet in self.list_pets()],
+        }
 
 
 class Scheduler:
-    def __init__(self, task_manager: TaskManager, constraints: Optional[Dict] = None):
-        self.task_manager = task_manager
-        self.constraints = constraints or {}
+    def __init__(self, owner: Owner, daily_available_minutes: int = 120):
+        self.owner = owner
+        self.daily_available_minutes = daily_available_minutes
 
-    def build_plan(self, available_time: int, target_date: date) -> Schedule:
-        raise NotImplementedError
+    def get_priority_queue(self, include_completed: bool = False) -> List[Task]:
+        """Get all tasks ordered by priority for scheduling."""
+        return self.owner.all_tasks(include_completed=include_completed)
 
-    def select_tasks(self) -> List[Task]:
-        raise NotImplementedError
+    def schedule_today(self, target_date: Optional[date] = None) -> Dict:
+        target_date = target_date or date.today()
+        available = self.daily_available_minutes
+        total = 0
+        selected: List[Task] = []
 
-    def order_tasks(self, tasks: List[Task]) -> List[Task]:
-        raise NotImplementedError
+        for task in self.get_priority_queue(include_completed=False):
+            if total + task.duration_minutes > available:
+                continue
+            selected.append(task)
+            total += task.duration_minutes
 
-    def handle_overflow(self, tasks: List[Task], available_time: int) -> List[Task]:
-        raise NotImplementedError
+        explanation = [
+            f"Scheduled {len(selected)} tasks for {target_date.isoformat()} (using {total}/{available} mins)"
+        ]
+        for task in selected:
+            explanation.append(
+                f"{task.name} ({task.category}) {task.duration_minutes}m priority {task.priority}"
+            )
 
-    def generate_explanation(self, plan: Schedule) -> str:
-        raise NotImplementedError
+        return {
+            "date": target_date.isoformat(),
+            "available_minutes": available,
+            "scheduled_minutes": total,
+            "tasks": [task.to_dict() for task in selected],
+            "explanation": explanation,
+        }
 
+    def add_task_to_pet(self, pet_id: int, task: Task) -> bool:
+        pet = self.owner.get_pet(pet_id)
+        if not pet:
+            return False
+        pet.add_task(task)
+        return True
 
-class OwnerProfile:
-    def __init__(self, owner_name: str, available_minutes_per_day: int, pet_type: str, pet_age: int):
-        self.owner_name = owner_name
-        self.available_minutes_per_day = available_minutes_per_day
-        self.pet_type = pet_type
-        self.pet_age = pet_age
-        self.preferences: Dict = {}
-        self.special_needs: List[str] = []
-
-    def update_preferences(self, preferences: Dict) -> None:
-        raise NotImplementedError
-
-    def available_time_for(self, target_date: date) -> int:
-        raise NotImplementedError
+    def mark_task_complete(self, pet_id: int, task_id: int, completed_at: Optional[datetime] = None) -> bool:
+        pet = self.owner.get_pet(pet_id)
+        if not pet:
+            return False
+        task = pet.get_task(task_id)
+        if not task:
+            return False
+        task.mark_complete(at=completed_at)
+        return True
 
