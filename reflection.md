@@ -7,7 +7,19 @@
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
 
-**b. Design changes**
+- Core action 1: Add and manage pet care tasks. Users can create tasks with duration, priority, and category, then update or remove them.
+- Core action 2: Generate a daily schedule. The system selects and orders tasks within available time and explains the rationale.
+- Core action 3: View today’s plan (scheduled tasks with time blocks) and explanation of why each task was selected.
+
+**b. Building blocks**
+
+- Task: stores id, name, category, duration, priority, status; methods to update/manage status.
+- TaskManager: tracks tasks list; methods add/edit/remove/list tasks.
+- Schedule: stores date, assignments, total used time, explanation; methods validate/serialize.
+- Scheduler: uses TaskManager + constraints; methods select tasks, build plan, and generate reasoning.
+- OwnerProfile: stores owner/pet availability and preferences; methods return available time.
+
+**c. Design changes**
 
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
@@ -20,6 +32,10 @@
 
 - What constraints does your scheduler consider (for example: time, priority, preferences)?
 - How did you decide which constraints mattered most?
+
+- Core action 1 mapped to constraint: task data correctness and edit flow (must be possible to create/update/delete tasks).
+- Core action 2 mapped to constraint: available daily time budget and priority ordering to choose tasks.
+- Core action 3 mapped to constraint: output clarity + reasoning explanation (users need to understand schedule decisions).
 
 **b. Tradeoffs**
 
