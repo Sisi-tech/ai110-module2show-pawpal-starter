@@ -75,3 +75,25 @@ efficiently plan daily care tasks.
 The scheduler uses a greedy algorithm for simplicity and performance. While fast
 and easy to understand, it may not always produce the most optimal combination
 of tasks compared to more advanced optimization approaches.
+
+## Testing PawPal+
+
+To ensure the reliability and correctness of PawPal+, a suite of automated tests has been implemented using pytest.
+
+Run Tests
+
+```python -m pytest```
+
+### What the Tests Cover
+
+-- **Sorting Correctness**
+Verifies that tasks are ordered properly (e.g., chronological order when applicable).
+
+- **Recurrence Logic**
+Ensures that recurring tasks (daily/weekly) are automatically regenerated after being marked complete.
+
+- **Conflict Detection**
+Confirms that overlapping tasks with start and end times are correctly identified as conflicts.
+
+- **Core Scheduler Behavior**
+Validates that the scheduler selects tasks based on priority and available time constraints.
