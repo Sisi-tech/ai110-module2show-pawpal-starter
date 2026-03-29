@@ -49,6 +49,7 @@ PawPal+ includes an improved scheduling system designed to help pet owners
 efficiently plan daily care tasks.
 
 ### Key Features
+PawPal+ helps pet owners plan and manage pet care tasks efficiently using intelligent scheduling. Key features include:
 
 - **Priority-Based Scheduling**
   Tasks are automatically sorted by priority, ensuring that the most important
@@ -69,6 +70,10 @@ efficiently plan daily care tasks.
 - **Recurring Task Support**
   Daily and weekly tasks are automatically regenerated after completion,
   helping maintain consistent care routines.
+
+## 📸 Demo
+
+<a href="./screenshot.png" target="_blank"><img src='./screenshot.png' title='PawPal App' width='' alt='PawPal App' class='center-block' /></a>
 
 ### Design Tradeoff
 
